@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>표류연애 시뮬레이터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E7EFEC; --surface:#F7FBF9; --ink:#0F3D46; --ink-soft:#4E6E72; --line:#C5D6D2;
+  --deep:#0F3D46; --deep-ink:#E7F2EF;
+  --palm:#2F7A4F; --flare:#C9392A; --buoy:#B57C0C; --buoy-bg:#F6E3B4; --heart:#B83E66; --sea:#1C6E7D;
+  --display:"Black Han Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --body:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B2126; --surface:#11313A; --ink:#E2EEEA; --ink-soft:#9DB8B5; --line:#24474F;
+    --deep:#071A1E; --deep-ink:#E2EEEA;
+    --palm:#64C48A; --flare:#FF6E5A; --buoy:#F2C14E; --buoy-bg:#3A3417; --heart:#F07A9C; --sea:#55B9CA;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B2126; --surface:#11313A; --ink:#E2EEEA; --ink-soft:#9DB8B5; --line:#24474F;
+  --deep:#071A1E; --deep-ink:#E2EEEA;
+  --palm:#64C48A; --flare:#FF6E5A; --buoy:#F2C14E; --buoy-bg:#3A3417; --heart:#F07A9C; --sea:#55B9CA;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.65}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+
+/* hero */
+.hero{background:var(--deep);color:var(--deep-ink);position:relative;padding:40px 0 64px}
+.hero h1{font-family:var(--display);font-weight:400;font-size:clamp(56px,11vw,120px);line-height:.95;margin:0;letter-spacing:-.01em}
+.hero .lede{max-width:560px;margin:18px 0 28px;color:color-mix(in srgb,var(--deep-ink) 78%,transparent);font-size:16px}
+.hero .wave{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:36px;display:block}
+.hero .wave path{fill:var(--bg)}
+.tabs{display:inline-flex;gap:4px;background:color-mix(in srgb,var(--deep-ink) 10%,transparent);padding:4px;border-radius:999px;flex-wrap:wrap}
+.tabs button{border:0;background:transparent;color:var(--deep-ink);padding:8px 18px;border-radius:999px;cursor:pointer;font-weight:500}
+.tabs button[aria-selected="true"]{background:var(--deep-ink);color:var(--deep)}
+
+main{padding:28px 20px 80px}
+section[hidden]{display:none}
+h2{font-family:var(--display);font-weight:400;font-size:30px;margin:0 0 6px}
+h3{font-size:17px;margin:28px 0 10px}
+.muted{color:var(--ink-soft)}
+
+/* toolbar */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 20px}
+.toolbar .spacer{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--ink-soft)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.count{font-weight:700}
+
+/* cast */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 16px;border-top:5px solid var(--sea)}
+.card.g-F{border-top-color:var(--heart)}
+.card-top{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.card-top .nick{font-family:var(--display);font-size:24px;border:0;background:transparent;width:100%;min-width:0;padding:0}
+.card-top select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 6px}
+.del{border:0;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:18px;padding:2px 6px;border-radius:6px}
+.del:hover{color:var(--flare)}
+.f{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:8px}
+.f input,.f textarea,.f select{display:block;width:100%;margin-top:2px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px;font-size:14px}
+.f textarea{resize:vertical;min-height:52px}
+.row3{display:grid;grid-template-columns:1.4fr 1fr .7fr;gap:8px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;margin:6px 0 10px}
+.stat{display:grid;grid-template-columns:44px 1fr 20px;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft)}
+.stat input{width:100%;accent-color:var(--sea)}
+.card.g-F .stat input{accent-color:var(--heart)}
+.mbti-note{font-size:12px;color:var(--ink-soft);margin:4px 0 0;line-height:1.5}
+.t-intro{font-size:14px}
+.stat output{font-weight:700;color:var(--ink);text-align:right}
+
+/* run */
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin:14px 0 22px}
+.controls .f{margin:0}
+.controls .f input{width:200px}
+.strip{display:grid;grid-template-columns:repeat(14,minmax(64px,1fr));gap:4px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px}
+.strip-wrap{overflow-x:auto}
+.day-cell{border:0;cursor:pointer;background:var(--surface);border-bottom:4px solid var(--line);border-radius:8px 8px 2px 2px;padding:8px 6px 6px;text-align:left;min-width:64px}
+.day-cell b{font-family:var(--display);font-weight:400;font-size:20px;display:block;line-height:1}
+.day-cell small{display:block;font-size:11px;color:var(--ink-soft);margin-top:4px;line-height:1.3}
+.day-cell.k-storm,.day-cell.k-injury,.day-cell.k-animal,.day-cell.k-water{border-bottom-color:var(--flare)}
+.day-cell.k-ticket,.day-cell.k-truth,.day-cell.k-note{border-bottom-color:var(--heart)}
+.day-cell.k-crate,.day-cell.k-mission,.day-cell.k-calm{border-bottom-color:var(--palm)}
+.day-cell.k-night{border-bottom-color:var(--buoy)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.chip{border:1px solid var(--line);background:transparent;padding:5px 12px;border-radius:999px;cursor:pointer;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.day-block{margin-bottom:26px}
+.day-head{display:flex;align-items:baseline;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:4px;margin-bottom:10px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:1}
+.day-head b{font-family:var(--display);font-weight:400;font-size:26px}
+.entry{display:grid;grid-template-columns:52px 1fr;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line)}
+.entry.hide{display:none}
+.tag{font-size:11px;font-weight:700;text-align:center;border-radius:6px;padding:2px 0;align-self:start;margin-top:3px;color:var(--surface);background:var(--ink-soft)}
+.t-event .tag,.t-evac .tag{background:var(--sea)}
+.t-evac .tag{background:var(--flare)}
+.t-date .tag,.t-moment .tag,.t-confess .tag{background:var(--heart)}
+.t-conflict .tag,.t-breakup .tag,.t-switch .tag{background:var(--flare)}
+.t-food .tag,.t-share .tag{background:var(--palm)}
+.t-rival .tag,.t-argue .tag{background:var(--flare)}
+.t-ploy .tag,.t-misunder .tag,.t-burden .tag{background:#8A5AA8}
+.t-cry .tag{background:#4F6FA8}
+.t-couple .tag,.t-final .tag,.t-keep .tag{background:var(--buoy);color:#1b1400}
+.t-route{font-size:13px;color:var(--ink-soft)}
+.t-evac .txt,.t-switch .txt,.t-final .txt{font-weight:700}
+.inner{margin-top:6px;padding:8px 10px;border-left:3px solid var(--heart);background:color-mix(in srgb,var(--heart) 7%,transparent);border-radius:0 8px 8px 0;font-size:14px}
+.inner .who{font-weight:700}
+.meter{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-soft);margin:3px 0}
+.bar{flex:0 0 120px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--heart)}
+.inner p{margin:2px 0 0}
+.empty{padding:40px 0;color:var(--ink-soft)}
+
+/* results */
+.finals{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
+.pair{font-family:var(--display);font-size:28px;background:var(--buoy-bg);padding:10px 18px;border-radius:12px}
+.pair span{color:var(--heart);margin:0 6px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;font-size:13px}
+th,td{padding:5px 8px;border:1px solid var(--line);text-align:center;white-space:nowrap}
+th{background:var(--surface);font-weight:700}
+td.l,th.l{text-align:left}
+.hm td{min-width:44px;font-weight:500}
+.status-evac{color:var(--flare);font-weight:700}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);max-width:640px;width:calc(100% - 32px);padding:18px}
+dialog textarea{width:100%;min-height:300px;font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+@media (max-width:560px){
+  .row3{grid-template-columns:1fr 1fr}
+  .row3 .f:first-child{grid-column:1/-1}
+  .entry{grid-template-columns:44px 1fr}
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <h1>표류연애</h1>
+    <p class="lede">무인도에서 14일. 보급품은 커플에게만 지급된다. 출연자를 정하고 촬영을 돌리면, 매일의 사건과 속마음이 로그로 남는다.</p>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="cast" aria-selected="true">출연자</button>
+      <button role="tab" data-tab="run" aria-selected="false">촬영 로그</button>
+      <button role="tab" data-tab="result" aria-selected="false">결과</button>
+    </nav>
+  </div>
+  <svg class="wave" viewBox="0 0 1200 36" preserveAspectRatio="none" aria-hidden="true"><path d="M0,20 C150,0 300,36 450,18 C600,0 750,34 900,16 C1030,2 1120,22 1200,14 L1200,36 L0,36 Z"/></svg>
+</header>
+
+<main class="wrap">
+  <section id="tab-cast">
+    <h2>출연자</h2>
+    <p class="muted">능력치는 0~10. MBTI는 글자마다 행동 성향에 반영된다. 진정성이 낮을수록 커플 선택에서 생존 계산 비중이 커지고, 체력이 떨어지면 누구든 계산적으로 변한다.</p>
+    <div class="toolbar">
+      <span class="count" id="count"></span>
+      <span class="spacer"></span>
+      <button class="btn" id="add-m">남자 추가</button>
+      <button class="btn" id="add-f">여자 추가</button>
+      <button class="btn" id="json-open">JSON 내보내기/불러오기</button>
+      <button class="btn" id="reset">기본 출연진으로 되돌리기</button>
+    </div>
+    <div class="grid" id="cast-grid"></div>
+  </section>
+
+  <section id="tab-run" hidden>
+    <h2>촬영 로그</h2>
+    <p class="muted">같은 시드와 같은 출연진이면 언제나 같은 결과가 나온다. 마음에 드는 회차는 시드를 적어 두세요.</p>
+    <div class="controls">
+      <label class="f">시드<input id="seed" type="text" autocomplete="off"></label>
+      <button class="btn" id="seed-rand">새 시드</button>
+      <button class="btn primary" id="run">촬영 시작</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn" id="copy">로그 텍스트로 복사</button>
+    </div>
+    <div id="run-out"><p class="empty">촬영 시작을 누르면 14일치 로그가 여기에 나온다.</p></div>
+  </section>
+
+  <section id="tab-result" hidden>
+    <h2>결과</h2>
+    <div id="result-out"><p class="empty">아직 촬영한 회차가 없다.</p></div>
+  </section>
+</main>
+
+<dialog id="json-dialog">
+  <h3 style="margin-top:0">출연진 JSON</h3>
+  <p class="muted" style="font-size:13px">복사해서 보관하거나, 붙여넣고 적용하면 출연진을 바꿀 수 있다.</p>
+  <textarea id="json-text" spellcheck="false"></textarea>
+  <div class="toolbar" style="margin-bottom:0">
+    <span id="json-err" style="color:var(--flare);font-size:13px"></span>
+    <span class="spacer"></span>
+    <button class="btn" id="json-close">닫기</button>
+    <button class="btn primary" id="json-apply">적용</button>
+  </div>
+</dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- data ---------- */
+const STATS=[["charm","매력"],["survival","생존력"],["stamina","체력"],["social","사교성"],["sincerity","진정성"],["jealousy","질투"]];
+const PREFS=[["charm","매력"],["survival","생존력"],["stamina","체력"],["social","사교성"],["sincerity","진정성"]];
+const DAYS=14;
+const MBTIS=["ISTJ","ISFJ","INFJ","INTJ","ISTP","ISFP","INFP","INTP","ESTP","ESFP","ENFP","ENTP","ESTJ","ESFJ","ENFJ","ENTJ"];
+const MBTI_NOTE={E:"사람을 찾아다니고 고백이 빠르다",I:"한 사람에게 오래 머문다",S:"먹을 것 구하기에 강하고 현실적이다",N:"설렘에 약하고 마음이 자주 출렁인다",T:"커플 선택에서 계산 비중이 크다",F:"감정 비중이 크고 상처도 크게 받는다",J:"한 번 정하면 잘 안 바꾼다",P:"즉흥적이고 환승 가능성이 높다"};
+const DEFAULT_CAST=[
+ {nick:"건우",name:"차건우",gender:"M",nation:"한국",age:33,job:"해양경찰 구조대원",line:"물에 빠지면 부르세요. 마음에 빠진 건 알아서 하시고.",mbti:"ISTJ",exes:2,pref:"sincerity",prefWhy:"구조 현장에서 사람의 바닥을 너무 많이 봤다. 위기 앞에서도 거짓말하지 않는 사람이면 된다.",why:"남은 연차를 다 쓰라는 상사의 명령. 신청서는 여동생이 몰래 냈다.",charm:7,survival:10,stamina:9,social:4,sincerity:8,jealousy:3},
+ {nick:"하람",name:"유하람",gender:"M",nation:"한국",age:26,job:"뮤지컬 앙상블 배우",line:"카메라 꺼져도 저는 이 텐션이에요.",mbti:"ENFP",exes:6,pref:"charm",prefWhy:"무대에서 조명 받는 사람에게 끌린다. 자기도 그런 사람이 되고 싶어서.",why:"방송 한 번 타면 오디션 서류라도 붙지 않을까. 반은 진심, 반은 연애도 하고 싶어서.",charm:9,survival:3,stamina:6,social:10,sincerity:5,jealousy:6},
+ {nick:"렌",name:"쿠로사와 렌",gender:"M",nation:"일본",age:29,job:"가구 공방 목수",line:"말보다… 만드는 게, 편합니다.",mbti:"ISFP",exes:1,pref:"social",prefWhy:"본인이 말이 없으니, 먼저 말 걸어 주는 사람이 고맙다.",why:"한국 드라마로 한국어를 독학했다. 한국 사람과 진짜 대화를 해 보고 싶었다.",charm:6,survival:8,stamina:7,social:3,sincerity:9,jealousy:4},
+ {nick:"마테오",name:"마테오 로시",gender:"M",nation:"이탈리아",age:31,job:"요트 선장",line:"바다는 내 집이에요. 여러분은 손님이고.",mbti:"ESTP",exes:9,pref:"charm",prefWhy:"인생은 짧고, 아름다운 건 한눈에 알아봐야 한다는 신조.",why:"친구가 나온 연프를 보고 내가 나가면 더 재밌겠다고 생각했다.",charm:8,survival:9,stamina:8,social:8,sincerity:4,jealousy:2},
+ {nick:"현",name:"남궁현",gender:"M",nation:"한국",age:36,job:"핀테크 스타트업 대표",line:"연애도 결국 리스크 관리죠.",mbti:"ENTJ",exes:4,pref:"survival",prefWhy:"회사가 망할 뻔했을 때 곁에 남은 건 능력 있는 사람들뿐이었다.",why:"투자 유치를 앞두고 인간적인 이미지가 필요하다는 홍보팀의 제안.",charm:6,survival:4,stamina:4,social:7,sincerity:3,jealousy:7},
+ {nick:"시우",name:"백시우",gender:"M",nation:"한국",age:24,job:"수의대 본과생",line:"동물은 거짓말을 안 하잖아요. 사람은 좀 어렵고.",mbti:"INFJ",exes:1,pref:"sincerity",prefWhy:"첫 연애에서 양다리를 당했다. 그 뒤로 사람을 잘 못 믿는다.",why:"누나가 신청했다. 그런데 사실 본인도 이대로는 안 되겠다고 생각하던 참이었다.",charm:5,survival:5,stamina:5,social:3,sincerity:10,jealousy:5},
+ {nick:"태식",name:"오태식",gender:"M",nation:"한국",age:30,job:"헬스 트레이너 겸 유튜버",line:"체력이 곧 매력입니다. 증명해 드릴게요.",mbti:"ESFJ",exes:5,pref:"stamina",prefWhy:"같이 운동하고 같이 땀 흘릴 수 있어야 오래 간다.",why:"구독자 10만 달성 공약. 지켜야 하는 남자다.",charm:7,survival:6,stamina:10,social:8,sincerity:6,jealousy:8},
+ {nick:"윤재",name:"서윤재",gender:"F",nation:"한국",age:28,job:"응급실 간호사",line:"피는 괜찮아요. 거짓말은 못 참지만.",mbti:"ESTJ",exes:3,pref:"sincerity",prefWhy:"응급실에서 보호자들 얼굴을 보면 누가 진짜 사랑하는지 보인다.",why:"3교대 5년 차 번아웃. 전화가 안 터지는 2주가 필요했다.",charm:7,survival:7,stamina:7,social:6,sincerity:8,jealousy:4},
+ {nick:"사쿠라",name:"하나무라 사쿠라",gender:"F",nation:"일본",age:25,job:"여행 브이로거",line:"이 섬 진짜 예쁘다. 근데 와이파이는요?",mbti:"ESFP",exes:7,pref:"survival",prefWhy:"솔직히 저 아무것도 못 하잖아요. 저를 지켜 줄 사람이요.",why:"한국 진출. 팔로워가 늘면 좋고, 사랑까지 찾으면 더 좋고.",charm:10,survival:2,stamina:4,social:9,sincerity:4,jealousy:7},
+ {nick:"해솔",name:"강해솔",gender:"F",nation:"한국",age:32,job:"클라이밍 강사(산악구조대 출신)",line:"제가 먼저 올라가 있을게요.",mbti:"ISTP",exes:1,pref:"social",prefWhy:"본인이 무뚝뚝해서, 자기를 웃게 만드는 사람에게 약하다.",why:"친구와의 내기에서 졌다. 진 쪽이 연프 신청하기였다.",charm:6,survival:9,stamina:10,social:4,sincerity:9,jealousy:2},
+ {nick:"도아",name:"이도아",gender:"F",nation:"한국",age:27,job:"웹소설 작가",line:"여기 있는 분들, 다 캐릭터로 보여요. 죄송해요.",mbti:"INFP",exes:0,pref:"charm",prefWhy:"주인공 같은 사람. 소설에선 매일 쓰는데 실제로 본 적이 없어서.",why:"연재 중인 소설 소재가 연프라서 취재차. 출연진에게는 비밀이다.",charm:7,survival:3,stamina:5,social:5,sincerity:6,jealousy:5},
+ {nick:"클로이",name:"클로이 마틴",gender:"F",nation:"캐나다",age:30,job:"영어 강사(한국 거주 7년)",line:"한국 산 지 7년이에요. 소주로는 저 못 이겨요.",mbti:"ENTP",exes:4,pref:"stamina",prefWhy:"주말마다 백패킹을 간다. 같이 산 탈 사람이 필요하다.",why:"한국에서 연애가 왜 이렇게 어려운지 직접 알아보고 싶어서.",charm:8,survival:5,stamina:6,social:8,sincerity:7,jealousy:3}
+];
+const EVENTS=[
+ {key:"storm",label:"폭풍",w:3},{key:"injury",label:"부상",w:2},{key:"crate",label:"표류 상자",w:2},
+ {key:"water",label:"식수 고갈",w:2},{key:"animal",label:"해파리",w:1},{key:"ticket",label:"데이트권",w:2},
+ {key:"truth",label:"진실게임",w:2},{key:"note",label:"익명 쪽지",w:1},{key:"calm",label:"잔잔한 날",w:1},{key:"mission",label:"커플 미션",w:1}
+];
+const TYPE_LABEL={intro:"인터뷰",share:"나눔",rival:"기싸움",argue:"말다툼",ploy:"질투 유발",misunder:"오해",cry:"눈물",burden:"부담",event:"사건",date:"데이트",moment:"설렘",conflict:"신경전",food:"식량",couple:"커플",breakup:"파기",switch:"환승",confess:"고백",reject:"거절",evac:"퇴소",final:"최종",route:"동선",system:"안내",night:"밤",vote:"투표",keep:"유지",secret:"비밀"};
+
+/* ---------- utils ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function josa(w,pair){
+  const [a,b]=pair.split("/");const c=w.charCodeAt(w.length-1);let has=false;
+  if(c>=0xAC00&&c<=0xD7A3){const j=(c-0xAC00)%28;has=j!==0;if(pair==="으로/로"&&j===8)has=false;}
+  return w+(has?a:b);
+}
+function makeRng(str){
+  let h=2166136261;for(const ch of String(str)){h^=ch.codePointAt(0);h=Math.imul(h,16777619);}
+  let a=h>>>0;
+  const r=()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+  return{r,range:(x,y)=>x+r()*(y-x),pick:arr=>arr[Math.floor(r()*arr.length)],chance:p=>r()<p,
+    shuffle:arr=>{const b=arr.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;},
+    weighted:(items,ws)=>{const tot=ws.reduce((s,w)=>s+Math.max(0,w),0);if(tot<=0)return items[Math.floor(r()*items.length)];let x=r()*tot;for(let i=0;i<items.length;i++){x-=Math.max(0,ws[i]);if(x<=0)return items[i];}return items[items.length-1];}};
+}
+function store(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function load(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),1800);}
+
+/* ---------- simulation ---------- */
+function simulate(cast,seed){
+  const R=makeRng(seed);
+  const P=cast.map((c,i)=>({...c,i,hp:Math.min(100,Math.round(76+c.stamina*2.4)),alive:true,partner:null,evac:null}));
+  const n=P.length;
+  const A=P.map(()=>Array(n).fill(0)),RIV=P.map(()=>Array(n).fill(0));
+  const opp=(p,q)=>p.gender!==q.gender;
+  const has=(p,ch)=>String(p.mbti||"").toUpperCase().includes(ch);
+  const exp=p=>Math.min(Number(p.exes)||0,10);
+  const N=p=>p.nick,J=(p,j)=>josa(p.nick,j);
+  for(const p of P)for(const q of P)if(opp(p,q))A[p.i][q.i]=clamp(12+q.charm*2.6+((q[p.pref]??5)-5)*1.6+R.range(-8,8)+(p.mbti&&q.mbti?((has(p,"N")===has(q,"N"))?4:0)+((has(p,"E")!==has(q,"E"))?3:0):0),0,100);
+  const log=[],days=[];let cur=null;
+  const L=(type,text,inner)=>log.push({day:cur.day,type,text,inner:inner||null});
+  const alive=()=>P.filter(p=>p.alive);
+  const oppAlive=p=>alive().filter(q=>opp(p,q));
+  const addA=(a,b,v)=>{if(!a||!b||a===b)return;if(v>0)v*=(1-A[a.i][b.i]/125);A[a.i][b.i]=clamp(A[a.i][b.i]+v,0,100);};
+  const hpAdd=(p,v)=>{p.hp=clamp(p.hp+v,0,100);};
+  const emoW=p=>{let w=0.4+p.sincerity*0.06+(has(p,"F")?0.08:0)-(has(p,"T")?0.08:0);if(p.hp<40)w-=0.15;if(p.hp<25)w-=0.1;return clamp(w,0.15,1);};
+  const survVal=q=>q.survival*7+q.stamina*2+q.hp*0.1;
+  const desire=(p,q)=>{const w=emoW(p);return w*A[p.i][q.i]+(1-w)*survVal(q);};
+  const best=(list,fn)=>{let b=null,bv=-Infinity;for(const x of list){const v=fn(x);if(v>bv){bv=v;b=x;}}return b?{q:b,v:bv}:null;};
+  const topA=p=>best(oppAlive(p),q=>A[p.i][q.i]);
+  const couples=()=>{const out=[],seen=new Set();for(const p of alive()){if(p.partner&&!seen.has(p.i)){seen.add(p.i);seen.add(p.partner.i);out.push(p.gender==="M"?[p,p.partner]:[p.partner,p]);}}return out;};
+  const makeCouple=(p,q)=>{if(p.partner)breakCouple(p);if(q.partner)breakCouple(q);p.partner=q;q.partner=p;};
+  const breakCouple=p=>{if(p.partner)p.partner.partner=null;p.partner=null;};
+  const inner=(p,q)=>{
+    const w=emoW(p),e=w*A[p.i][q.i],c=(1-w)*survVal(q),ep=Math.round(e/(e+c+0.001)*100);let line;
+    if(ep>=72)line=R.pick([`진짜 끌린다. ${N(q)} 말고는 안 보인다.`,`이건 섬이라서가 아니다. 그냥 ${J(q,"이/가")} 좋다.`,`보급품은 상관없다. ${J(q,"이/가")} 웃는 게 보고 싶었다.`]);
+    else if(ep>=52)line=R.pick([`좋은 사람이다. 같이 있으면 든든하기도 하고.`,`설레는 건 맞다. 솔직히 담요 생각도 조금 났다.`,`마음이 기운 건 맞는데, 이 섬이 아니었어도 그랬을지는 모르겠다.`]);
+    else if(ep>=35)line=R.pick([`혼자서는 이 섬에서 못 버틴다. ${J(q,"이/가")} 제일 현실적인 선택이다.`,`마음이 아주 없는 건 아니다. 그래도 계산이 먼저였다.`]);
+    else line=R.pick([`마음은 없다. 살아남는 게 먼저다.`,`${N(q)}의 생존력이 필요했다. 그게 전부다.`,`배고픈 건 싫다. 그래서 잡은 손이다.`]);
+    if(p.mbti&&R.chance(0.35)){const fl=[];
+      if(has(p,"T")&&ep<60)fl.push("감정은 변수고 생존은 상수다. 합리적으로 생각하면 답은 하나였다.","손익만 따지면 이게 맞다. 마음은 나중 문제다.");
+      if(has(p,"F")&&ep>=55)fl.push(`${J(q,"이/가")} 아프면 나도 아플 것 같다.`,`${N(q)} 앞에서는 계산이 잘 안 된다.`);
+      if(has(p,"N"))fl.push(`이 섬이 아니라 다른 데서 만났다면, 하는 생각을 자꾸 한다.`);
+      if(has(p,"J"))fl.push("정했으면 끝까지 간다. 그게 나다.");
+      if(has(p,"P"))fl.push(`내일은 또 모르겠다. 오늘은 ${josa(N(q),"이다/다")}.`);
+      if(has(p,"S")&&ep<60)fl.push("말보다 행동이다. 내일 아침에 누가 불을 피우는지 보면 안다.");
+      if(fl.length)line=R.pick(fl);}
+    return{who:N(p),ep,line};
+  };
+  const secret=(p,line)=>({who:N(p),ep:null,line});
+  const FR=P.map(p=>P.map(q=>(p!==q&&!opp(p,q))?18+p.social+q.social:0));
+  const sadQ=[];
+  const upset=(p,line)=>{if(!p)return;p.sad=(p.sad||0)+1;sadQ.push({p,line});};
+  const NEG={
+    burden:q=>["아, 좀 부담스럽다.",`${N(q)} 나쁜 사람은 아닌데, 자꾸 옆에 오니까 숨이 막힌다.`,"좋다는 건 알겠는데 나는 아니다. 어떻게 말하지.","호의인 건 아는데, 받을수록 빚지는 기분이다."],
+    annoyed:q=>["솔직히 둘 다 좀 질린다.","이런 거 보려고 섬에 온 거 아닌데."],
+    cringe:q=>["유치하다. 그런 걸로 흔들릴 줄 알았나.","저런 거 진짜 별로다. 오히려 정 떨어진다."],
+    hurt:q=>["괜찮은 척했다. 하나도 안 괜찮다.","내가 뭘 잘못했지.","섬에 괜히 왔나 싶다."],
+    doubt:q=>["뭐지. 왜 저 둘이 같이 있지.","믿고 싶은데 자꾸 그 장면이 떠오른다.","내가 예민한 건가. 아닌 것 같은데."],
+    rivalBurden:q=>["둘 다 왜 저러는지 모르겠다. 솔직히 좀 부담스럽다.","나를 두고 싸우는 거, 하나도 안 설렌다. 피곤하다."],
+    pride:q=>[`${N(q)} 거 받기 싫었다. 빚지는 기분이라.`,"배고픈 것보다 동정받는 게 더 싫었다."]
+  };
+  const neg=(p,q,k)=>secret(p,R.pick(NEG[k](q)));
+
+  /* daytime */
+  const meet=(p,q)=>{
+    const nn=(has(p,"N")||has(q,"N"))?9:7;const chem=R.range(-nn,nn);
+    if(R.chance(Math.max(0.03,0.15-p.social*0.012-exp(p)*0.004+(exp(p)===0?0.04:0)+(has(p,"I")?0.01:0)))){addA(q,p,-(4+R.r()*6));addA(p,q,-2);return{awk:true,dq:-5};}
+    const fam=p.partner===q?0.5:1;
+    const dq=(2+p.charm*0.6+p.social*0.5+chem+((p[q.pref]??5)-5)*0.6)*fam;
+    const dp=(2+q.charm*0.4+chem*0.6+((q[p.pref]??5)-5)*0.5)*fam*(has(p,"F")?1.1:1);
+    addA(q,p,dq);addA(p,q,dp);return{awk:false,dq};
+  };
+  function daytime(){
+    const meetings=[];
+    for(const p of R.shuffle(alive())){
+      const cands=oppAlive(p);if(!cands.length)continue;let q;
+      const stay=0.5+p.sincerity*0.035+(has(p,"J")?0.1:0)-(has(p,"P")?0.08:0)+(has(p,"I")?0.05:0)-(has(p,"E")?0.05:0);
+      const ex=has(p,"I")?3:2;
+      if(p.partner&&R.chance(stay))q=p.partner;
+      else q=R.weighted(cands,cands.map(c=>Math.pow(desire(p,c)/10,ex)+4));
+      meetings.push([p,q]);
+      if(has(p,"E")&&cands.length>1&&R.chance(0.35)){const others=cands.filter(c=>c!==q);meetings.push([p,R.weighted(others,others.map(c=>Math.pow(desire(p,c)/10,2)+4))]);}
+    }
+    if(!meetings.length)return;
+    L("route","낮 동선: "+meetings.map(([p,q])=>`${N(p)}→${N(q)}`).join(", "));
+    let moments=0;const seen=new Set();
+    for(const [p,q] of meetings){
+      const key=[p.i,q.i].sort().join("-");const r=meet(p,q);
+      if(r.awk){if(R.chance(0.55))L("conflict",R.pick([`${J(p,"이/가")} 먼저 말을 걸었지만 대화는 세 마디를 넘기지 못했다.`,`${J(p,"은/는")} ${N(q)} 앞에서 괜히 아는 척을 했다. 분위기가 식었다.`,`${J(p,"과/와")} ${N(q)}, 같이 조개를 캐다가 사소한 일로 말다툼을 했다.`]));}
+      else if(!seen.has(key)&&moments<2&&A[p.i][q.i]>58&&A[q.i][p.i]>58&&R.chance((has(p,"N")||has(q,"N"))?0.5:0.4)){moments++;
+        L("moment",R.pick([`해 질 무렵, ${J(p,"과/와")} ${J(q,"은/는")} 말없이 수평선만 봤다. 둘 다 먼저 일어나지 않았다.`,`${J(p,"이/가")} 엮어 준 야자잎 팔찌를 ${J(q,"은/는")} 하루 종일 빼지 않았다.`,`물을 길으러 간 ${J(p,"과/와")} ${N(q)}, 돌아오는 데 한 시간이 걸렸다.`,`${J(q,"은/는")} ${N(p)}의 농담에 처음으로 소리 내어 웃었다.`,`비가 그친 바위 위에서 ${J(p,"이/가")} ${N(q)}의 젖은 머리를 털어 줬다.`]));}
+      else if(r.dq>=11&&R.chance(0.45))L("date",R.pick([`${J(q,"은/는")} 오늘 ${J(p,"을/를")} 다시 보게 됐다.`,`${J(p,"이/가")} 불을 피우는 동안 ${J(q,"은/는")} 옆에서 장작을 건넸다. 대화가 끊기지 않았다.`,`${J(p,"은/는")} ${N(q)}에게 자기 이야기를 처음 꺼냈다.`]));
+      seen.add(key);
+    }
+    let cf=0;
+    for(const X of R.shuffle(alive())){
+      const t=topA(X);if(!t||t.v<45)continue;const top=t.q;const rivals=new Set();
+      for(const [a,b] of meetings){if(a===top&&b!==X&&!opp(b,X))rivals.add(b);if(b===top&&a!==X&&!opp(a,X))rivals.add(a);}
+      for(const Y of rivals){RIV[X.i][Y.i]+=3+X.jealousy;
+        if(cf<2&&R.chance(X.jealousy*0.045)){cf++;
+          if(R.chance(0.5)){addA(top,X,-4);L("conflict",`${J(X,"은/는")} ${J(Y,"과/와")} 함께 있는 ${J(top,"을/를")} 계속 쳐다봤다. ${N(top)}도 그 시선을 느꼈다. 부담스러웠다.`);}
+          else{addA(top,X,3);L("conflict",`${J(X,"이/가")} ${N(Y)}에게 날을 세웠다. 그런데 ${J(top,"은/는")} 그 모습이 싫지 않았다.`);}
+        }}
+    }
+    drama(meetings);
+  }
+
+  /* special situations */
+  function drama(meetings){
+    const al=alive();
+    let bc=0;
+    for(const [p,q] of meetings){if(bc>=2)break;
+      if(A[q.i][p.i]<45&&A[p.i][q.i]>A[q.i][p.i]+25&&A[p.i][q.i]>55&&R.chance(0.35)){bc++;
+        L("burden",R.pick([`${J(p,"은/는")} 오늘도 ${N(q)} 옆을 떠나지 않았다.`,`${J(p,"이/가")} ${N(q)}에게 오늘만 세 번째로 물을 떠다 줬다.`,`${J(p,"은/는")} ${N(q)}의 일거수일투족을 챙겼다. 묻지도 않았는데.`]),[neg(q,p,"burden")]);}}
+    const tops=new Map();for(const X of al){const t=topA(X);if(t&&t.v>50)tops.set(X,t.q);}
+    // 기싸움
+    const keys=[...tops.keys()],pairs=[];
+    for(let a=0;a<keys.length;a++)for(let b=a+1;b<keys.length;b++){const X=keys[a],Y=keys[b];if(!opp(X,Y)&&tops.get(X)===tops.get(Y))pairs.push([X,Y,tops.get(X)]);}
+    if(pairs.length&&R.chance(0.3)){
+      const [X,Y,T]=R.pick(pairs);
+      const kind=R.pick(["food","fish","seat",X.gender==="M"?"arm":"fire"]);
+      const intro={food:`아침 식사 경쟁. ${J(X,"과/와")} ${J(Y,"이/가")} 동시에 ${N(T)} 앞에 구운 생선을 내밀었다.`,
+        fish:`낚시 내기가 붙었다. 말은 안 했지만 ${J(X,"과/와")} ${N(Y)}, 둘 다 ${J(T,"을/를")} 의식하고 있었다.`,
+        seat:`모닥불 앞, ${N(T)}의 옆자리를 두고 ${J(X,"과/와")} ${N(Y)} 사이에 묘한 자리싸움이 벌어졌다.`,
+        arm:`누가 먼저 꺼냈는지 모를 팔씨름. ${N(X)} 대 ${N(Y)}. 구경하는 사람들 사이에 ${N(T)}도 있었다.`,
+        fire:`불 피우기를 서로 하겠다고 나섰다. ${J(X,"과/와")} ${N(Y)}, 둘 다 ${N(T)}의 텐트 앞이었다.`}[kind];
+      const sc=z=>({food:z.survival+z.charm*0.5,fish:z.survival,seat:z.social+z.charm*0.5,arm:z.stamina,fire:z.survival+z.stamina*0.3}[kind])+R.r()*6;
+      const [W,Lo]=sc(X)>=sc(Y)?[X,Y]:[Y,X];
+      addA(T,W,6);RIV[X.i][Y.i]+=10;RIV[Y.i][X.i]+=10;
+      const out={food:`${J(T,"은/는")} ${N(W)}의 접시를 받았다. ${N(Lo)}의 접시는 그대로 식어 갔다.`,
+        fish:`${J(W,"이/가")} 이겼다. ${J(Lo,"은/는")} 빈 바구니를 들고 말없이 돌아섰다.`,
+        seat:`결국 ${N(T)} 옆에 앉은 건 ${josa(N(W),"이었다/였다")}. ${J(Lo,"은/는")} 맞은편에서 불만 쑤셨다.`,
+        arm:`${N(W)}의 승리. ${J(Lo,"은/는")} 손목을 털며 웃었지만 눈은 웃지 않았다.`,
+        fire:`${J(T,"은/는")} ${J(W,"이/가")} 피운 불 앞에 앉았다. ${N(Lo)}의 불은 금방 꺼졌다.`}[kind];
+      L("rival",intro);
+      const tin=(A[T.i][W.i]<40&&A[T.i][Lo.i]<40)?neg(T,W,"rivalBurden"):neg(Lo,T,"hurt");
+      L("rival",out,[tin]);
+      if(R.chance(0.6))upset(Lo,`${J(T,"은/는")} 내 쪽을 한 번도 안 봤다.`);
+    }
+    // 말다툼
+    const ac=[];for(const X of al)for(const Y of al)if(X!==Y&&!opp(X,Y)&&RIV[X.i][Y.i]>40)ac.push([X,Y]);
+    if(ac.length&&R.chance(0.3)){
+      const [X,Y]=R.weighted(ac,ac.map(([a,b])=>RIV[a.i][b.i]));
+      L("argue",R.pick([`땔감 당번 문제로 시작된 말이 커졌다. ${J(X,"이/가")} 먼저 언성을 높였다.`,`${J(X,"은/는")} ${N(Y)}에게 적당히 좀 하라고 쏘아붙였다. ${N(Y)}도 지지 않았다.`,`"식량 몰래 먹은 거 너지?" ${N(X)}의 한마디에 분위기가 얼어붙었다. ${J(Y,"은/는")} 어이없다는 듯 웃었다.`,`${J(X,"과/와")} ${N(Y)}, 결국 터졌다. 카메라가 있다는 걸 둘 다 잊은 것 같았다.`]));
+      RIV[X.i][Y.i]*=0.6;RIV[Y.i][X.i]+=10;
+      for(const z of oppAlive(X)){addA(z,X,-2);addA(z,Y,-1);}
+      const T=(topA(X)||{}).q;
+      if(T){const dx=A[T.i][X.i],dy=A[T.i][Y.i];
+        if(Math.abs(dx-dy)<8){addA(T,X,-4);addA(T,Y,-4);L("argue",`${J(T,"은/는")} 둘 다 보기 싫다는 듯 자리를 떴다.`,[neg(T,X,"annoyed")]);}
+        else{const side=dx>dy?X:Y,other=side===X?Y:X;addA(T,other,-6);L("argue",`${J(T,"은/는")} 결국 ${N(side)} 편을 들었다.`);upset(other,`${J(T,"은/는")} ${N(side)} 편이었다. 당연한가.`);}}
+    }
+    // 질투 유발
+    const ployers=al.filter(X=>{const t=topA(X);return t&&t.v>55&&A[t.q.i][X.i]<t.v-15&&(has(X,"P")||has(X,"E")||X.jealousy>=6||X.charm>=8);});
+    if(ployers.length&&R.chance(0.15)){
+      const X=R.pick(ployers),T=topA(X).q,Zs=oppAlive(X).filter(z=>z!==T);
+      if(Zs.length){const Z=best(Zs,z=>z.charm+R.r()*4).q;addA(Z,X,6);
+        L("ploy",R.pick([`${J(X,"은/는")} 일부러 ${J(T,"이/가")} 보는 앞에서 ${N(Z)}에게 머리를 기댔다.`,`${J(X,"은/는")} ${N(T)} 들으라는 듯 ${N(Z)}의 농담에 크게 웃었다.`,`${J(X,"은/는")} ${N(T)}가 지나갈 타이밍에 맞춰 ${N(Z)}에게 팔찌를 엮어 주고 있었다.`.replace(`${N(T)}가`,J(T,"이/가"))]),[secret(X,`${N(T)} 보라고 한 거였다. ${N(Z)}한테는 미안하지만.`)]);
+        if(A[T.i][X.i]>35&&T.jealousy>=4&&R.chance(0.55)){addA(T,X,8);L("ploy",`효과가 있었다. ${J(T,"은/는")} 하루 종일 ${N(X)} 쪽을 흘끔거렸다.`,[secret(T,"왜 신경 쓰이지. 신경 쓰일 이유가 없는데.")]);}
+        else{addA(T,X,-6);L("ploy",`${J(T,"은/는")} 단번에 눈치챘다.`,[neg(T,X,"cringe")]);}
+        if(R.chance(0.3)){addA(Z,X,-10);upset(Z,"이용당한 거였다. 잠깐이라도 설렌 내가 바보지.");L("ploy",`${N(Z)}도 눈치챘다. 자기가 들러리였다는 걸.`,[neg(Z,X,"hurt")]);}
+      }
+    }
+    // 오해
+    for(const [p,q] of meetings){
+      if(p.partner&&q!==p.partner&&p.partner.alive&&R.chance(0.04)){const r=p.partner;addA(r,p,-8);
+        L("misunder",`${J(r,"은/는")} ${J(p,"과/와")} ${J(q,"이/가")} 숲에서 같이 나오는 걸 봤다.`,[neg(r,p,"doubt")]);
+        if(R.chance(0.5)){addA(r,p,5);L("misunder",`저녁에 ${J(p,"이/가")} 먼저 해명했다. 땔감을 같이 주웠을 뿐이라고.`);}
+        else{upset(r,`${J(p,"은/는")} 아무 말도 안 했다. 내가 물어봐야 하나.`);L("misunder",`${J(r,"은/는")} 묻지 않았다. ${J(p,"은/는")} 아무것도 모른다.`);}
+        break;}
+    }
+  }
+
+  /* evening */
+  function evening(){
+    for(const p of alive())hpAdd(p,-(7-p.stamina*0.4));
+    const cs=couples();
+    for(const [a,b] of cs){hpAdd(a,11);hpAdd(b,11);}
+    if(cs.length)L("food",`커플 보급: ${cs.length}쌍이 식량과 담요를 받았다.`);
+    const solos=alive().filter(p=>!p.partner);
+    const starving=solos.filter(p=>p.hp<35);
+    for(const [a,b] of R.shuffle(cs)){if(!starving.length)break;
+      for(const g of R.shuffle([a,b])){
+        if(!R.chance(0.15+(has(g,"F")?0.15:0)+(g.sincerity>=8?0.1:0)))continue;
+        const sv=best(starving,x=>(opp(g,x)?A[g.i][x.i]:FR[g.i][x.i])+(40-x.hp)).q;starving.splice(starving.indexOf(sv),1);
+        hpAdd(g,-4);hpAdd(sv,5);if(opp(g,sv))addA(sv,g,10);else FR[sv.i][g.i]+=12;
+        L("share",`${J(g,"은/는")} 커플 보급품 일부를 챙겨 ${N(sv)}에게 몰래 건넸다.`);
+        const mate=g.partner;
+        if(opp(g,sv)&&mate&&(mate.jealousy>=5||R.chance(0.3))){addA(mate,g,-6);RIV[mate.i][sv.i]+=12;upset(mate,`내 몫까지 나눠 준 거였다. ${N(sv)}한테.`);
+          L("conflict",`${J(mate,"은/는")} 아무 말도 하지 않았다. 그게 더 무서웠다.`,[neg(mate,g,"doubt")]);}
+        break;}
+    }
+    const ok=[],fail=[];
+    for(const p of R.shuffle(solos)){
+      if(R.chance(0.22+p.survival*0.06-(p.hp<30?0.1:0)+(has(p,"S")?0.05:0)-(has(p,"N")?0.02:0)))ok.push(p);else fail.push(p);
+    }
+    if(solos.length)L("food",`솔로 ${solos.length}명은 먹을 것을 직접 구해야 했다. 성공: ${ok.map(N).join(", ")||"없음"} / 실패: ${fail.map(N).join(", ")||"없음"}`);
+    if(solos.length>=4&&fail.length>=2&&ok.length>=1&&R.chance(0.15)){
+      const per=ok.length*8/solos.length;for(const p of solos)hpAdd(p,per-(fail.includes(p)?4:0));
+      for(const f of fail)for(const o of ok){if(opp(f,o))addA(f,o,3);else FR[f.i][o.i]+=5;}
+      const leader=best(ok,p=>p.social+p.survival).q;
+      L("share",`${J(leader,"이/가")} 제안했다. 솔로끼리 잡은 걸 다 모아서 같이 먹자고. ${solos.length}명이 모닥불 하나에 둘러앉았다. 양은 적었지만 아무도 굶지 않았다.`);
+    }else{
+      const givers=new Set();let shown=0;
+      for(const f of R.shuffle(fail)){
+        const cands=ok.filter(h=>!givers.has(h));
+        if(!cands.length){hpAdd(f,-7);continue;}
+        const b=best(cands,h=>(opp(h,f)?A[h.i][f.i]:FR[h.i][f.i])+h.sincerity*3+(has(h,"F")?10:0)+(f.hp<35?10:0)+R.r()*10);
+        if(b.v<65||!R.chance(0.55)){hpAdd(f,-7);continue;}
+        const h=b.q;givers.add(h);
+        const fv=opp(h,f)?A[f.i][h.i]:FR[f.i][h.i];
+        if(fv<25&&R.chance(0.3)){hpAdd(f,-6);hpAdd(h,8);if(opp(h,f))addA(h,f,-3);
+          L("share",`${J(h,"이/가")} 내민 조개를 ${J(f,"은/는")} 받지 않았다. 차라리 굶겠다고 했다.`,[neg(f,h,"pride")]);continue;}
+        const all=h.hp>60&&R.chance(0.35);
+        if(all)hpAdd(f,2);else{hpAdd(h,4);hpAdd(f,-2);}
+        if(opp(h,f)){addA(f,h,all?13:8);addA(h,f,3);}else{FR[f.i][h.i]+=all?14:9;FR[h.i][f.i]+=5;}
+        if(shown<3){shown++;
+          L("share",all?R.pick([`${J(h,"은/는")} 자기 몫을 통째로 ${N(f)}에게 넘겼다. 낮에 많이 먹었다고 했다. 거짓말이었다.`,`${J(h,"은/는")} 하나뿐인 생선을 ${N(f)} 앞에 내려놓고 돌아섰다.`])
+            :R.pick([`${J(h,"과/와")} ${N(f)}, 작은 생선 한 마리를 반씩 나눠 먹었다.`,`${J(h,"이/가")} 구운 소라 두 개 중 하나를 ${N(f)}에게 건넸다.`,`${J(f,"은/는")} 빈손으로 돌아왔다. ${J(h,"이/가")} 말없이 자기 그릇을 밀어 줬다.`]),
+            all&&opp(h,f)&&R.chance(0.5)?[secret(h,`배는 고프다. 그래도 ${N(f)}가 먹는 게 낫다.`.replace(`${N(f)}가`,J(f,"이/가")))]:null);
+          if(opp(h,f)){const watcher=alive().find(x=>x!==h&&!opp(x,h)&&(topA(x)||{}).q===f);
+            if(watcher&&R.chance(0.5)){RIV[watcher.i][h.i]+=10;L("conflict",`그 장면을 ${J(watcher,"이/가")} 보고 있었다.`);}}
+        }
+      }
+      for(const h of ok)if(!givers.has(h))hpAdd(h,8);
+    }
+    for(const p of alive()){
+      if(p.hp<=0){p.alive=false;p.evac=cur.day;const was=p.partner;breakCouple(p);
+        if(was)upset(was,`${J(p,"이/가")} 실려 갔다. 아무것도 못 했다.`);L("evac",`${J(p,"이/가")} 탈진으로 쓰러졌다. 의료진 판단으로 퇴소.${was?` 커플이던 ${J(was,"은/는")} 혼자 남았다.`:""}`);}
+      else if(p.hp<22&&R.chance(0.5))L("system",`${N(p)} 체력 위험. 걸음이 눈에 띄게 느려졌다.`);
+    }
+  }
+
+  /* nights */
+  function firstImpression(){
+    L("night","첫날 밤, 첫인상 선택. 각자 가장 끌린 이성에게 조개껍데기를 놓는다.");
+    const votes={};const lines=[];
+    for(const p of alive()){const t=topA(p);if(!t)continue;votes[t.q.i]=(votes[t.q.i]||0)+1;lines.push(`${N(p)}→${N(t.q)}`);}
+    L("vote",lines.join(", "));
+    const ranked=alive().map(p=>({p,v:votes[p.i]||0})).sort((a,b)=>b.v-a.v);
+    if(ranked.length&&ranked[0].v>0){const topv=ranked[0].v;const tops=ranked.filter(x=>x.v===topv).map(x=>N(x.p));L("vote",`최다 득표: ${tops.join(", ")} (${topv}표). 한 표도 못 받은 사람: ${ranked.filter(x=>x.v===0).map(x=>N(x.p)).join(", ")||"없음"}`);}
+  }
+  function matching(label){
+    L("night",label);
+    for(let it=0;it<14;it++){
+      const solos=alive().filter(p=>!p.partner);const pick=new Map();
+      for(const p of solos){const b=best(solos.filter(q=>opp(p,q)),q=>desire(p,q));if(b&&b.v>=30)pick.set(p,b.q);}
+      let changed=false;
+      for(const p of R.shuffle(solos)){const q=pick.get(p);
+        if(q&&!p.partner&&!q.partner&&pick.get(q)===p){makeCouple(p,q);changed=true;
+          L("couple",`${J(p,"과/와")} ${N(q)}, 서로를 골랐다.`,[inner(p,q),inner(q,p)]);}}
+      if(!changed){
+        for(const q of R.shuffle(solos)){if(q.partner)continue;
+          const props=solos.filter(p=>!p.partner&&pick.get(p)===q);if(!props.length)continue;
+          const b=best(props,p=>desire(q,p));
+          if(b&&b.v>=40){const want=pick.get(q);makeCouple(b.q,q);changed=true;
+            L("couple",`${N(b.q)}의 손을 ${J(q,"이/가")} 잡았다.${want&&want!==b.q?` ${J(q,"이/가")} 원래 바라본 사람은 ${N(want)}였다.`:""}`,[inner(b.q,q),inner(q,b.q)]);
+            break;}
+          else if(R.chance(0.5)){L("reject",`${J(q,"은/는")} ${props.map(N).join(", ")}의 선택을 받았지만 아무 손도 잡지 않았다.`);}
+        }
+      }
+      if(!changed)break;
+    }
+    const left=alive().filter(p=>!p.partner);
+    for(const p of left)if(R.chance(0.35))upset(p,"또 혼자 남았다. 다들 짝이 있는데.");
+    L("night",`오늘 밤 커플: ${couples().map(([a,b])=>`${N(a)}♥${N(b)}`).join(", ")||"없음"}. 솔로: ${left.map(N).join(", ")||"없음"}`);
+  }
+  function breakNight(){
+    L("night","해체의 밤. 커플마다 각자 비밀 투표로 유지할지 파기할지 정한다.");
+    for(const [p,q] of couples()){
+      const decide=(x,y)=>{const dv=desire(x,y);const alt=best(oppAlive(x).filter(z=>z!==y),z=>desire(x,z));return{keep:dv>=(has(x,"T")?40:has(x,"F")?35:38)&&(!alt||dv>=alt.v-(has(x,"J")?9:has(x,"P")?2:5)),alt:alt&&alt.q,dv};};
+      const dp=decide(p,q),dq=decide(q,p);
+      if(dp.keep&&dq.keep){L("keep",`${N(p)}♥${N(q)}, 둘 다 유지에 표를 던졌다.`,R.chance(0.5)?[inner(p,q),inner(q,p)]:null);continue;}
+      breakCouple(p);
+      const why=(x,d)=>d.dv<35?`${J(x,"은/는")} 더 이상 끌리지 않는다고 썼다.`:`${N(x)}의 마음은 ${N(d.alt)} 쪽에 가 있었다.`;
+      if(!dp.keep&&!dq.keep){L("breakup",`${N(p)}♥${N(q)}, 둘 다 파기에 표를 던졌다. 어색한 박수가 나왔다.`,[secret(p,why(p,dp)),secret(q,why(q,dq))]);}
+      else{const [x,dx,y]=!dp.keep?[p,dp,q]:[q,dq,p];addA(y,x,has(y,"F")?-20:has(y,"T")?-10:-15);if(has(y,"F"))hpAdd(y,-5);upset(y,`${J(x,"이/가")} 파기에 표를 던졌다. 나는 유지에 걸었는데.`);
+        L("breakup",`${J(x,"이/가")} 파기 표를 던졌다. ${J(y,"은/는")} 유지에 걸었다.`,[secret(x,why(x,dx))]);}
+    }
+  }
+  const lastConf={};
+  function confessions(){
+    let c=0;
+    for(const p of R.shuffle(alive())){
+      if(c>=2)break;if(p.partner&&R.chance(has(p,"J")?0.7:has(p,"P")?0.3:0.45))continue;
+      const b=best(oppAlive(p).filter(q=>q!==p.partner),q=>desire(p,q));if(!b)continue;const q=b.q;
+      if(b.v<55||(p.partner&&b.v<desire(p,p.partner)+6))continue;
+      const ck=p.i+"-"+q.i;if(lastConf[ck]&&cur.day-lastConf[ck]<4)continue;
+      if(!R.chance(0.25+p.social*0.035+(has(p,"E")?0.08:0)-(has(p,"I")?0.05:0)))continue;c++;lastConf[ck]=cur.day;
+      L("confess",R.pick([`${J(p,"이/가")} 밤바다 앞으로 ${J(q,"을/를")} 불러냈다.`,`모두 잠든 뒤, ${J(p,"이/가")} ${N(q)}의 텐트 앞에 섰다.`])+(p.partner?` 커플인 ${J(p.partner,"을/를")} 두고서.`:""));
+      const vq=desire(q,p);
+      if(!q.partner){
+        if(vq>=45){const old=p.partner;makeCouple(p,q);if(old){addA(old,p,-25);RIV[old.i][q.i]+=25;}
+          L("couple",`고백 성공. ${J(p,"과/와")} ${N(q)}, 새 커플.${old?` ${J(old,"은/는")} 아침에야 그 사실을 알았다.`:""}`,[inner(q,p)]);}
+        else{addA(p,q,-8);upset(p,`${J(q,"은/는")} 미안하다고 했다. 그 말이 제일 아팠다.`);L("reject",`${J(q,"은/는")} 미안하다고 했다. ${J(p,"은/는")} 괜찮다고 했다. 괜찮지 않았다.`,A[q.i][p.i]<35?[neg(q,p,"burden")]:null);}
+      }else{const r=q.partner;
+        if(vq>desire(q,r)+1+(has(q,"J")?6:0)-(has(q,"P")?3:0)){upset(r,`어제까지 같이 담요를 덮던 사람이었다.`);const old=p.partner;makeCouple(p,q);addA(r,q,-25);RIV[r.i][p.i]+=30;if(old)addA(old,p,-25);
+          L("switch",`환승. ${J(q,"이/가")} ${J(r,"을/를")} 두고 ${N(p)}에게 갔다.`,[inner(q,p),secret(r,`어제까지 같이 담요를 덮던 사람이었다.`)]);}
+        else{addA(p,q,-6);RIV[r.i][p.i]+=15;L("reject",R.pick([`${J(q,"은/는")} ${N(r)} 곁에 남기로 했다. 하지만 흔들린 건 사실이었다.`,`${J(q,"은/는")} 대답 대신 ${N(r)}의 텐트로 돌아갔다.`,`${J(q,"은/는")} 고맙다고만 했다. ${N(r)}에게는 아무 말도 하지 않았다.`]),[inner(q,p)]);}
+      }
+    }
+  }
+  function finalChoice(){
+    const ev=P.filter(p=>!p.alive);
+    if(ev.length)L("system",`퇴소했던 ${ev.map(N).join(", ")}도 최종 선택을 위해 섬으로 돌아왔다.`);
+    L("night","최종 선택. 섬을 떠나면 보급품은 의미가 없다. 이번 선택은 마음으로만 한다.");
+    const choices=[];
+    for(const p of P){const b=best(P.filter(q=>opp(p,q)),q=>A[p.i][q.i]);const pick=b&&b.v>=55?b.q:null;choices.push({p,pick,partner:p.partner});}
+    L("vote",choices.map(c=>`${N(c.p)}→${c.pick?N(c.pick):"선택 안 함"}`).join(", "));
+    for(const c of choices){
+      if(c.partner&&c.pick!==c.partner){
+        L("final",c.pick?`${J(c.p,"은/는")} 섬에서 커플이던 ${J(c.partner,"이/가")} 아니라 ${J(c.pick,"을/를")} 골랐다.`:`${J(c.p,"은/는")} 섬에서 커플이던 ${J(c.partner,"을/를")} 고르지 않았다. 아무도 고르지 않았다.`,
+          [secret(c.p,c.pick?`섬에서는 살아야 했다. 이제는 아니다.`:`고마웠다. 그게 다였다.`)]);}
+    }
+    const finals=[];const used=new Set();
+    for(const c of choices){if(!c.pick||used.has(c.p.i))continue;const back=choices.find(x=>x.p===c.pick);
+      if(back&&back.pick===c.p){used.add(c.p.i);used.add(c.pick.i);const pair=c.p.gender==="M"?[c.p,c.pick]:[c.pick,c.p];finals.push(pair);
+        L("final",`최종 커플: ${N(pair[0])}♥${N(pair[1])}`);}}
+    if(!finals.length)L("final","최종 커플 없음. 모두 각자 배에 올랐다.");
+    for(const c of choices)if(c.pick&&!finals.some(f=>f.includes(c.p)))upset(c.p,`${J(c.pick,"은/는")} 나를 고르지 않았다.`);
+    for(const c of choices){if(c.pick&&!finals.some(f=>f.includes(c.p))&&R.chance(0.6)){const x=choices.find(y=>y.p===c.pick);
+      L("reject",`${J(c.p,"은/는")} ${J(c.pick,"을/를")} 골랐지만, ${N(c.pick)}의 선택은 `+(x&&x.pick?`${josa(N(x.pick),"이었다/였다")}.`:"아무도 아니었다."));}}
+    return{choices,finals};
+  }
+
+  /* tears */
+  function cryTime(){
+    const seen=new Set();let n=0;
+    for(const {p,line} of R.shuffle(sadQ)){
+      if(seen.has(p.i)||n>=2)continue;seen.add(p.i);
+      const pc=0.22+(has(p,"F")?0.25:0)+(p.sincerity>=8?0.1:0)-(has(p,"T")?0.1:0)+((p.sad||0)>1?0.15:0);
+      if(!R.chance(pc))continue;n++;p.sad=0;
+      L("cry",R.pick([`${J(p,"은/는")} 모두 잠든 뒤 혼자 바닷가에 나가 울었다.`,`${J(p,"은/는")} 텐트 안에서 소리 죽여 울었다. 옆 텐트까지 다 들렸다.`,`${N(p)}의 눈이 붉었다. 모래가 들어갔다고 했다.`,`${J(p,"은/는")} 설거지를 하다 말고 갑자기 울음을 터뜨렸다.`]),[secret(p,line)]);
+      const others=P.filter(c=>c!==p&&(c.alive||cur.day===DAYS));
+      const cb=best(others,c=>(opp(c,p)?A[c.i][p.i]:FR[c.i][p.i])+R.r()*10);
+      if(cb&&cb.v>45){const c=cb.q;
+        if(opp(c,p)){addA(p,c,9);addA(c,p,3);}else{FR[p.i][c.i]+=10;FR[c.i][p.i]+=8;}
+        L("moment",R.pick([`${J(c,"이/가")} 말없이 옆에 앉았다. 아무것도 묻지 않았다.`,`${J(c,"은/는")} 담요를 가져와 ${N(p)}의 어깨에 덮어 줬다.`,`${J(c,"이/가")} 따라 나왔다. 울어도 된다고, 카메라 없는 데로 가자고 했다.`]));
+        if(opp(c,p)&&c.partner&&c.partner!==p&&c.partner.alive&&R.chance(0.5)){addA(c.partner,c,-5);RIV[c.partner.i][p.i]+=8;L("conflict",`${J(c.partner,"은/는")} 그 장면을 텐트 틈으로 보고 있었다.`);}
+      }else L("cry","아무도 오지 않았다.");
+    }
+    sadQ.length=0;for(const p of P)if(!seen.has(p.i))p.sad=Math.max(0,(p.sad||0)-1);
+  }
+
+  /* events */
+  function runEvent(key){
+    const al=alive();if(!al.length)return;
+    if(key==="storm"){
+      L("event",R.pick(["새벽부터 비바람이 몰아쳤다. 임시 거처가 반쯤 날아갔다.","폭풍이 섬을 덮쳤다. 모닥불이 꺼지고 모두 젖은 채 밤을 샜다."]));
+      for(const p of al){let loss=Math.max(3,9+R.r()*9-p.stamina*0.6);if(p.partner)loss*=0.6;hpAdd(p,-loss);}
+      const cs=couples();for(const [a,b] of cs){addA(a,b,4);addA(b,a,4);}
+      if(cs.length)L("moment",`커플들은 담요 하나를 나눠 덮고 버텼다. (${cs.map(([a,b])=>`${N(a)}♥${N(b)}`).join(", ")})`);
+      const solo=al.filter(p=>!p.partner).sort((a,b)=>a.hp-b.hp)[0];
+      if(solo)L("event",`${J(solo,"은/는")} 혼자 바위 틈에 몸을 웅크린 채 아침을 기다렸다.`);
+    }else if(key==="injury"){
+      const v=R.weighted(al,al.map(p=>11-p.survival));hpAdd(v,-22);
+      L("event",R.pick([`${J(v,"이/가")} 바위에서 미끄러져 발목을 다쳤다.`,`${J(v,"이/가")} 코코넛을 따다 떨어졌다.`]));
+      const c=best(oppAlive(v),x=>A[x.i][v.i]+R.r()*10+(has(x,"F")?10:0));
+      if(c){hpAdd(c.q,-3);addA(v,c.q,12);addA(c.q,v,5);L("moment",`${J(c.q,"이/가")} 하루 종일 ${N(v)} 곁을 지켰다.`);
+        if(v.partner&&v.partner!==c.q){addA(v.partner,c.q,0);RIV[v.partner.i][c.q.i]+=10;L("conflict",`커플인 ${J(v.partner,"은/는")} 그 모습을 멀리서 지켜만 봤다.`);}}
+    }else if(key==="crate"){
+      const f=R.weighted(al,al.map(p=>p.survival+p.stamina));
+      L("event",`${J(f,"이/가")} 해안가에서 떠밀려 온 보급 상자를 발견했다.`);
+      const t=topA(f);
+      if(t&&t.v>50&&R.chance(0.3+f.sincerity*0.05)){hpAdd(t.q,15);hpAdd(f,5);addA(t.q,f,10);
+        L("moment",`${J(f,"은/는")} 상자 속 통조림을 제일 먼저 ${N(t.q)}에게 내밀었다.`,[secret(f,`생각보다 먼저 손이 갔다.`)]);}
+      else{hpAdd(f,18);L("event",`${J(f,"은/는")} 아무에게도 말하지 않고 상자를 숨겼다.`);
+        if(R.chance(0.35)){for(const x of oppAlive(f))addA(x,f,-5);L("conflict",`저녁에 들켰다. 아무도 대놓고 말하진 않았지만 공기가 달라졌다.`);}}
+    }else if(key==="water"){
+      for(const p of al)hpAdd(p,-8);const hero=best(al,p=>p.survival+R.r()*3).q;
+      L("event","식수가 바닥났다. 다들 입술이 말라 갔다.");
+      L("event",`${J(hero,"이/가")} 숲 안쪽에서 샘을 찾아냈다. 다들 ${J(hero,"을/를")} 다시 봤다.`);
+      for(const x of oppAlive(hero))addA(x,hero,4);for(const p of al)hpAdd(p,4);
+    }else if(key==="animal"){
+      const v=R.pick(al);hpAdd(v,-15);L("event",`${J(v,"이/가")} 얕은 물에서 해파리에 쏘였다.`);
+      const others=al.filter(p=>p!==v);if(others.length){const res=best(others,p=>p.survival+p.stamina+R.r()*4).q;
+        if(opp(v,res)){addA(v,res,10);L("moment",`${J(res,"이/가")} 망설임 없이 물에 뛰어들어 ${J(v,"을/를")} 끌어냈다.`);}
+        else L("event",`${J(res,"이/가")} 재빨리 응급처치를 했다.`);}
+    }else if(key==="ticket"){
+      L("event","제작진 미션: 해안 달리기. 우승자에게 단독 데이트권과 식량이 주어진다.");
+      const w=best(al,p=>p.stamina+p.survival*0.5+R.r()*6).q;hpAdd(w,8);
+      const t=best(oppAlive(w),q=>desire(w,q));if(!t)return;
+      L("date",`${J(w,"이/가")} 1등을 했다. 데이트 상대로 ${J(t.q,"을/를")} 지목했다.${w.partner&&w.partner!==t.q?` 커플인 ${N(w.partner)} 앞에서.`:""}`);
+      addA(w,t.q,8);addA(t.q,w,6+w.charm*0.5);hpAdd(t.q,8);
+      if(w.partner&&w.partner!==t.q){addA(w.partner,w,-12);L("conflict",`${J(w.partner,"은/는")} 웃으며 박수를 쳤다. 눈은 웃고 있지 않았다.`);}
+      const jealous=oppAlive(t.q).filter(x=>x!==w&&A[x.i][t.q.i]>50);
+      for(const x of jealous)RIV[x.i][w.i]+=10;
+      if(jealous.length)L("conflict",`${jealous.map(N).join(", ")}의 표정이 굳었다.`);
+    }else if(key==="truth"){
+      L("event","모닥불 진실게임. 질문: 지금 이 섬에서 마음 가는 사람은?");
+      const p=R.pick(al);const t=topA(p);if(!t)return;
+      const honest=R.chance(0.25+p.sincerity*0.075+(has(p,"T")?0.1:0)-(has(p,"F")?0.05:0));
+      let named=t.q;if(!honest){named=p.partner&&p.partner!==t.q?p.partner:R.pick(oppAlive(p).filter(q=>q!==t.q))||t.q;}
+      L("event",`${J(p,"은/는")} ${N(named)}의 이름을 말했다.`,named!==t.q?[secret(p,`거짓말이었다. 진짜 마음은 ${N(t.q)} 쪽이다.`)]:null);
+      addA(named,p,5);
+      if(p.partner&&named!==p.partner){addA(p.partner,p,-12);L("conflict",`${N(p.partner)}의 표정이 굳었다.`);}
+    }else if(key==="note"){
+      const senders=al.filter(p=>{const t=topA(p);return t&&t.v>45;});if(!senders.length){L("event","파도만 치는 하루였다.");return;}
+      const p=R.pick(senders);const q=topA(p).q;
+      L("event",`${J(q,"은/는")} 아침에 신발 안에서 익명 쪽지를 발견했다.`,[secret(p,`쪽지를 쓴 건 ${N(p)}였다.`)]);
+      const cands=oppAlive(q);const g=R.weighted(cands,cands.map(x=>Math.pow(A[q.i][x.i],2)+20));
+      if(g===p){addA(q,p,10);L("moment",`${J(q,"은/는")} 단번에 ${N(p)}의 글씨체를 알아봤다.`);}
+      else{addA(q,g,6);L("event",`${J(q,"은/는")} 쪽지의 주인이 ${josa(N(g),"이라고/라고")} 확신했다. 틀렸다.`);}
+    }else if(key==="calm"){
+      L("event","파도가 잔잔했다. 모처럼 사냥도 수리도 없는 하루.");daytime();
+    }else if(key==="mission"){
+      const cs=couples();if(!cs.length){L("event","커플 미션이 예정돼 있었지만 커플이 한 쌍도 없었다.");return;}
+      L("event","커플 미션: 둘이서 뗏목을 엮어 부표까지 다녀올 것. 성공하면 식량 추가.");
+      const ok=[],fail=[];
+      for(const [a,b] of cs){const s=(a.survival+b.survival)/2+R.r()*4;
+        if(s>=6){hpAdd(a,8);hpAdd(b,8);addA(a,b,5);addA(b,a,5);ok.push(`${N(a)}♥${N(b)}`);}
+        else{addA(a,b,-6);addA(b,a,-6);fail.push(`${N(a)}♥${N(b)}`);}}
+      L("event",`성공: ${ok.join(", ")||"없음"} / 실패: ${fail.join(", ")||"없음"}`);
+      if(fail.length)L("conflict",`실패한 커플은 돌아오는 내내 서로 탓을 했다.`);
+    }
+  }
+
+  /* main loop */
+  const men=P.filter(p=>p.gender==="M").length,women=n-men;let prev=null;
+  for(let d=1;d<=DAYS;d++){
+    cur={day:d,event:"",key:""};days.push(cur);
+    if(d===1){cur.event="입도";cur.key="night";L("system",`남자 ${men}명, 여자 ${women}명이 섬에 도착했다. 보급품은 커플에게만 지급된다.`);for(const p of P)if(p.line)L("intro",`${N(p)}${p.mbti?` (${p.mbti})`:""}: "${p.line}"`);}
+    else if(d===DAYS){cur.event="최종 선택";cur.key="night";L("system","마지막 아침. 오늘 밤 최종 선택이 있다.");}
+    else{
+      const pool=EVENTS.filter(e=>e.key!==prev&&!(e.key==="mission"&&!couples().length));
+      const e=R.weighted(pool,pool.map(x=>x.w));prev=e.key;cur.event=e.label;cur.key=e.key;runEvent(e.key);
+      if(d===3||d===7||d===11)cur.event+=(d===3?" · 커플 결성":" · 해체의 밤");
+    }
+    if(d>1)for(const p of P){const dm=(has(p,"P")?1.3:1)*(has(p,"J")?0.7:1)*(has(p,"N")?1.15:1);for(const q of P)if(opp(p,q)){const a=A[p.i][q.i];A[p.i][q.i]=clamp(a+R.range(-5,5)*dm+(45-a)*0.06,0,100);}}
+    daytime();
+    let fin=null;
+    if(d!==DAYS)evening();
+    if(d===1)firstImpression();
+    else if(d===3)matching("첫 커플 결성의 밤. 서로를 고른 사람끼리 커플이 된다. 내일부터 보급품은 커플에게만.");
+    else if(d===7||d===11){breakNight();matching("재결성. 솔로가 된 사람들이 다시 서로를 고른다.");}
+    else if(d===DAYS)fin=finalChoice();
+    else if(d>3)confessions();
+    cryTime();
+    cur.couples=couples().map(([a,b])=>[a.i,b.i]);
+    cur.hp=P.map(p=>p.alive?Math.round(p.hp):null);
+    if(fin)Object.assign(cur,fin);
+  }
+  const last=days[days.length-1];
+  return{P,A,log,days,choices:last.choices,finals:last.finals,seed};
+}
+
+/* ---------- state & cast UI ---------- */
+let cast=load("pyoryu-cast-v2")||JSON.parse(JSON.stringify(DEFAULT_CAST));
+let lastResult=null;
+const saveCast=()=>store("pyoryu-cast-v2",cast);
+
+function renderCast(){
+  const m=cast.filter(c=>c.gender==="M").length,f=cast.length-m;
+  $("#count").textContent=`남 ${m} / 여 ${f}`;
+  $("#cast-grid").innerHTML=cast.map((c,i)=>`
+  <article class="card g-${c.gender}" data-i="${i}">
+    <div class="card-top">
+      <input class="nick" data-k="nick" value="${esc(c.nick)}" aria-label="부를 이름">
+      <select data-k="gender" aria-label="성별"><option value="M"${c.gender==="M"?" selected":""}>남</option><option value="F"${c.gender==="F"?" selected":""}>여</option></select>
+      <button class="del" data-del="${i}" aria-label="${esc(c.nick)} 삭제">✕</button>
+    </div>
+    <div class="row3">
+      <label class="f">이름<input data-k="name" value="${esc(c.name)}"></label>
+      <label class="f">국적<input data-k="nation" value="${esc(c.nation)}"></label>
+      <label class="f">나이<input data-k="age" type="number" min="18" max="70" value="${esc(c.age)}"></label>
+    </div>
+    <label class="f">직업<input data-k="job" value="${esc(c.job)}"></label>
+    <label class="f">한 줄 대사<input data-k="line" value="${esc(c.line||"")}"></label>
+    <div class="row3" style="grid-template-columns:1fr 1fr">
+      <label class="f">MBTI<select data-k="mbti"><option value="">없음</option>${MBTIS.map(m=>`<option${c.mbti===m?" selected":""}>${m}</option>`).join("")}</select></label>
+      <label class="f">이전 연애 횟수<input data-k="exes" type="number" min="0" max="30" value="${esc(c.exes??0)}"></label>
+    </div>
+    <div class="stats">${STATS.map(([k,l])=>`<label class="stat"><span>${l}</span><input type="range" min="0" max="10" step="1" data-k="${k}" value="${c[k]}"><output>${c[k]}</output></label>`).join("")}</div>
+    <label class="f">이상형 기준<select data-k="pref">${PREFS.map(([k,l])=>`<option value="${k}"${c.pref===k?" selected":""}>${l}</option>`).join("")}</select></label>
+    <label class="f">이상형 기준의 이유<textarea data-k="prefWhy">${esc(c.prefWhy||"")}</textarea></label>
+    <label class="f">출연 이유<textarea data-k="why">${esc(c.why||"")}</textarea></label>
+    <p class="mbti-note">${c.mbti?esc(c.mbti.split("").map(ch=>MBTI_NOTE[ch]).filter(Boolean).join(". ")+"."):"MBTI를 고르면 시뮬레이션 성향이 여기 표시된다."}</p>
+  </article>`).join("");
+}
+$("#cast-grid").addEventListener("input",e=>{
+  const card=e.target.closest(".card");if(!card)return;const i=+card.dataset.i,k=e.target.dataset.k;if(!k)return;
+  let v=e.target.value;if(STATS.some(s=>s[0]===k)||k==="age"||k==="exes"){v=Number(v);}
+  if(e.target.type==="range")e.target.nextElementSibling.textContent=v;
+  cast[i][k]=k==="nick"&&!String(v).trim()?"이름없음":v;saveCast();
+  if(k==="gender"||k==="mbti")renderCast();
+});
+$("#cast-grid").addEventListener("click",e=>{
+  const d=e.target.closest("[data-del]");if(!d)return;
+  const i=+d.dataset.del;if(!confirm(`${cast[i].nick} 출연자를 뺄까요?`))return;cast.splice(i,1);saveCast();renderCast();
+});
+const blank=g=>({nick:g==="M"?"새 남자":"새 여자",name:"",gender:g,nation:"한국",age:28,job:"",line:"",mbti:"",exes:0,prefWhy:"",why:"",pref:"charm",charm:5,survival:5,stamina:5,social:5,sincerity:5,jealousy:5});
+$("#add-m").onclick=()=>{cast.push(blank("M"));saveCast();renderCast();};
+$("#add-f").onclick=()=>{cast.push(blank("F"));saveCast();renderCast();};
+$("#reset").onclick=()=>{if(!confirm("지금 출연진을 지우고 기본 출연진으로 되돌릴까요?"))return;cast=JSON.parse(JSON.stringify(DEFAULT_CAST));saveCast();renderCast();};
+const dlg=$("#json-dialog");
+$("#json-open").onclick=()=>{$("#json-text").value=JSON.stringify(cast,null,2);$("#json-err").textContent="";dlg.showModal();};
+$("#json-close").onclick=()=>dlg.close();
+$("#json-apply").onclick=()=>{
+  try{const v=JSON.parse($("#json-text").value);if(!Array.isArray(v))throw new Error("배열 형식이어야 합니다.");
+    cast=v.map(c=>({...blank(c.gender==="F"?"F":"M"),...c,gender:c.gender==="F"?"F":"M"}));saveCast();renderCast();dlg.close();toast("출연진을 불러왔습니다");}
+  catch(err){$("#json-err").textContent="JSON을 읽지 못했습니다. "+err.message;}
+};
+
+/* ---------- run UI ---------- */
+const randSeed=()=>{const w=["파도","야자수","부표","조개","모닥불","뗏목","등대","해무","산호","갈매기"];return w[Math.floor(Math.random()*w.length)]+"-"+Math.floor(1000+Math.random()*9000);};
+$("#seed").value=load("pyoryu-seed")||randSeed();
+$("#seed-rand").onclick=()=>{$("#seed").value=randSeed();};
+$("#run").onclick=()=>{
+  const m=cast.filter(c=>c.gender==="M").length,f=cast.length-m;
+  if(!m||!f){toast("남녀 출연자가 최소 한 명씩 필요합니다");return;}
+  const seed=$("#seed").value.trim()||randSeed();$("#seed").value=seed;store("pyoryu-seed",seed);
+  lastResult=simulate(cast,seed);renderRun(lastResult);renderResult(lastResult);toast(`시드 ${seed} 촬영 완료`);
+};
+const FILTERS=[["all","전체"],["secret","속마음만"],["couple","커플 변화"],["event","사건"],["conflict","갈등"],["share","나눔"],["cry","눈물"]];
+const FMAP={couple:["couple","breakup","switch","keep","confess","reject","final","night","vote"],event:["event","evac","system","intro"],conflict:["conflict","switch","rival","argue","ploy","misunder","burden"],share:["share","food"],cry:["cry"]};
+function renderRun(res){
+  const byDay={};for(const e of res.log)(byDay[e.day]=byDay[e.day]||[]).push(e);
+  const strip=`<div class="strip-wrap"><div class="strip">${res.days.map(d=>`<button class="day-cell k-${d.key}" data-go="${d.day}"><b>${d.day}</b><small>${esc(d.event)}</small></button>`).join("")}</div></div>`;
+  const chips=`<div class="chips">${FILTERS.map(([k,l],i)=>`<button class="chip" data-f="${k}" aria-pressed="${i===0}">${l}</button>`).join("")}</div>`;
+  const blocks=res.days.map(d=>`<div class="day-block" id="day-${d.day}"><div class="day-head"><b>Day ${d.day}</b><span class="muted">${esc(d.event)}</span></div>${(byDay[d.day]||[]).map(entryHTML).join("")}</div>`).join("");
+  $("#run-out").innerHTML=strip+chips+blocks;
+}
+function entryHTML(e){
+  const inner=e.inner?e.inner.map(x=>`<div class="inner"><span class="who">${esc(x.who)} 속마음</span>${x.ep!=null?`<div class="meter"><span class="bar"><i style="width:${x.ep}%"></i></span>감정 ${x.ep}% / 계산 ${100-x.ep}%</div>`:""}<p>${esc(x.line)}</p></div>`).join(""):"";
+  return `<div class="entry t-${e.type}" data-type="${e.type}" data-secret="${e.inner?1:0}"><span class="tag">${TYPE_LABEL[e.type]||e.type}</span><div><span class="txt">${esc(e.text)}</span>${inner}</div></div>`;
+}
+$("#run-out").addEventListener("click",e=>{
+  const go=e.target.closest("[data-go]");if(go){document.getElementById("day-"+go.dataset.go).scrollIntoView();return;}
+  const chip=e.target.closest("[data-f]");if(!chip)return;const f=chip.dataset.f;
+  document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",String(c===chip)));
+  document.querySelectorAll(".entry").forEach(el=>{let show=true;
+    if(f==="secret")show=el.dataset.secret==="1";else if(f!=="all")show=FMAP[f].includes(el.dataset.type);
+    el.classList.toggle("hide",!show);});
+});
+function logText(res){
+  const out=[`표류연애 시뮬레이션 | 시드 ${res.seed}`,`출연자: ${res.P.map(p=>`${p.nick}(${p.gender==="M"?"남":"여"}, ${p.age}, ${p.nation}, ${p.job}${p.mbti?", "+p.mbti:""})`).join(", ")}`,""];
+  for(const d of res.days){out.push(`=== Day ${d.day} | ${d.event} ===`);
+    for(const e of res.log.filter(x=>x.day===d.day)){out.push(`[${TYPE_LABEL[e.type]||e.type}] ${e.text}`);
+      if(e.inner)for(const x of e.inner)out.push(`   (${x.who} 속마음${x.ep!=null?`, 감정 ${x.ep}%`:""}) ${x.line}`);}
+    out.push("");}
+  out.push(`최종 커플: ${res.finals.length?res.finals.map(([a,b])=>`${a.nick}♥${b.nick}`).join(", "):"없음"}`);
+  return out.join("\n");
+}
+$("#copy").onclick=async()=>{
+  if(!lastResult){toast("먼저 촬영을 돌려 주세요");return;}
+  const txt=logText(lastResult);
+  try{await navigator.clipboard.writeText(txt);toast("로그를 복사했습니다");}
+  catch(e){const t=document.createElement("textarea");t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand("copy");toast("로그를 복사했습니다");}catch(_){toast("복사하지 못했습니다");}t.remove();}
+};
+
+/* ---------- results UI ---------- */
+function renderResult(res){
+  const P=res.P,A=res.A,nick=i=>esc(P[i].nick);
+  const finals=res.finals.length?`<div class="finals">${res.finals.map(([a,b])=>`<div class="pair">${esc(a.nick)}<span>♥</span>${esc(b.nick)}</div>`).join("")}</div>`:`<p class="muted">최종 커플 없음.</p>`;
+  const choices=`<div class="scroll"><table><tr><th class="l">출연자</th><th>MBTI</th><th>마지막 섬 커플</th><th>최종 선택</th><th>상태</th><th>마지막 체력</th></tr>${res.choices.map(c=>{const p=c.p;const lastHp=[...res.days].reverse().find(d=>d.hp[p.i]!=null);
+    return `<tr><td class="l"><b>${esc(p.nick)}</b> <span class="muted">${esc(p.job)}</span></td><td>${esc(p.mbti||"-")}</td><td>${c.partner?esc(c.partner.nick):"-"}</td><td>${c.pick?esc(c.pick.nick):"선택 안 함"}</td><td>${p.evac?`<span class="status-evac">Day ${p.evac} 퇴소</span>`:"생존"}</td><td>${lastHp?lastHp.hp[p.i]:"-"}</td></tr>`;}).join("")}</table></div>`;
+  const hist=`<div class="scroll"><table><tr><th>Day</th><th class="l">그날 밤 커플</th></tr>${res.days.filter(d=>d.day>=3).map(d=>`<tr><td>${d.day}</td><td class="l">${d.couples.length?d.couples.map(([a,b])=>`${nick(a)}♥${nick(b)}`).join(", "):"-"}</td></tr>`).join("")}</table></div>`;
+  const hpT=`<div class="scroll"><table class="hm"><tr><th class="l">체력</th>${res.days.map(d=>`<th>${d.day}</th>`).join("")}</tr>${P.map(p=>`<tr><td class="l">${esc(p.nick)}</td>${res.days.map(d=>{const v=d.hp[p.i];return v==null?`<td class="muted">-</td>`:`<td style="background:color-mix(in srgb,var(--palm) ${Math.round(v*0.55)}%,transparent)">${v}</td>`;}).join("")}</tr>`).join("")}</table></div>`;
+  const heat=(from,to,title)=>`<h3>${title}</h3><div class="scroll"><table class="hm"><tr><th class="l">→</th>${to.map(q=>`<th>${esc(q.nick)}</th>`).join("")}</tr>${from.map(p=>`<tr><td class="l"><b>${esc(p.nick)}</b></td>${to.map(q=>{const v=Math.round(A[p.i][q.i]);return `<td style="background:color-mix(in srgb,var(--heart) ${Math.round(v*0.7)}%,transparent)">${v}</td>`;}).join("")}</tr>`).join("")}</table></div>`;
+  const M=P.filter(p=>p.gender==="M"),F=P.filter(p=>p.gender==="F");
+  $("#result-out").innerHTML=`<p class="muted">시드 ${esc(res.seed)}</p><h3>최종 커플</h3>${finals}<h3>출연자별 결말</h3>${choices}<h3>커플 변천사</h3>${hist}<h3>체력 변화</h3>${hpT}${heat(M,F,"마지막 날 호감도: 남자 → 여자")}${heat(F,M,"마지막 날 호감도: 여자 → 남자")}`;
+}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));
+  ["cast","run","result"].forEach(t=>$("#tab-"+t).hidden=t!==b.dataset.tab);
+});
+renderCast();
+</script>
+</body>
+</html>
